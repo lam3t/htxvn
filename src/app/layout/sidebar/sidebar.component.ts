@@ -21,9 +21,15 @@ import { HtxStateService } from '../../core/services/htx-state.service';
             <div class="htx-card-sub">{{ state.currentHtx().district }}</div>
           </div>
         </div>
-        <a routerLink="/htx-network" class="btn-switch-htx-link" title="Đổi sang Hợp tác xã khác">
-          <span>🔄 Đổi Hợp Tác Xã</span>
-        </a>
+        @if (state.canSwitchHtx()) {
+          <a routerLink="/htx-network" class="btn-switch-htx-link" title="Đổi sang Hợp tác xã khác (Admin)">
+            <span>🔄 Đổi Hợp Tác Xã</span>
+          </a>
+        } @else {
+          <div class="htx-locked-sidebar-tag">
+            <span>🔒 Phạm vi HTX trực thuộc</span>
+          </div>
+        }
       </div>
 
       <!-- USER PROFILE MINI CARD -->
@@ -272,6 +278,17 @@ import { HtxStateService } from '../../core/services/htx-state.service';
       background: var(--primary-600);
       color: #ffffff;
       border-color: var(--primary-600);
+    }
+
+    .htx-locked-sidebar-tag {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--primary-900);
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px dashed var(--primary-400);
+      border-radius: 4px;
+      padding: 3px 6px;
+      text-align: center;
     }
 
     .user-mini-card {

@@ -24,26 +24,34 @@ import { HTXInfo } from '../../core/models/htx.model';
         </a>
       </div>
 
-      <!-- CỤM 2: THANH CHUYỂN ĐỔI HTX NHANH (SIÊU TRỰC QUAN CHO NÔNG DÂN) -->
-      <div class="htx-quick-pills-bar hide-mobile">
-        <span class="pills-label">🏢 Chuyển nhanh HTX:</span>
-        <div class="pills-list">
-          @for (htx of state.cooperatives(); track htx.id) {
-            <button 
-              type="button"
-              class="htx-pill-btn" 
-              [class.active]="state.selectedHtxId() === htx.id"
-              (click)="selectHtx(htx)"
-              [title]="'Chuyển sang làm việc với ' + htx.name">
-              <span class="pill-logo">{{ htx.logo }}</span>
-              <span class="pill-name">{{ htx.shortName }}</span>
-              @if (state.selectedHtxId() === htx.id) {
-                <span class="pill-check">✓ Đang chọn</span>
-              }
-            </button>
-          }
+      <!-- CỤM 2: THANH CHUYỂN ĐỔI HTX (CHỈ ADMIN SỞ / HỆ THỐNG MỚI ĐƯỢC CHUYỂN TỰ DO) -->
+      @if (state.canSwitchHtx()) {
+        <div class="htx-quick-pills-bar hide-mobile">
+          <span class="pills-label">🏢 Quản trị toàn mạng lưới (Admin):</span>
+          <div class="pills-list">
+            @for (htx of state.cooperatives(); track htx.id) {
+              <button 
+                type="button"
+                class="htx-pill-btn" 
+                [class.active]="state.selectedHtxId() === htx.id"
+                (click)="selectHtx(htx)"
+                [title]="'Chuyển sang làm việc với ' + htx.name">
+                <span class="pill-logo">{{ htx.logo }}</span>
+                <span class="pill-name">{{ htx.shortName }}</span>
+                @if (state.selectedHtxId() === htx.id) {
+                  <span class="pill-check">✓ Đang chọn</span>
+                }
+              </button>
+            }
+          </div>
         </div>
-      </div>
+      } @else {
+        <!-- PHẠM VI CỐ ĐỊNH CHO BAN QUẢN TRỊ / XÃ VIÊN TỪNG HTX -->
+        <div class="htx-locked-badge hide-mobile">
+          <span class="lock-icon">🔒</span>
+          <span class="badge-text">Phạm vi dữ liệu: <strong>{{ state.currentHtx().name }}</strong> (Khóa theo tài khoản)</span>
+        </div>
+      }
 
       <!-- CỤM 3: VAI TRÒ & THÔNG BÁO & MỤC LỤC -->
       <div class="actions-area">
@@ -354,6 +362,26 @@ import { HTXInfo } from '../../core/models/htx.model';
     @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .htx-locked-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f1f5f9;
+      border: 1.5px solid #cbd5e1;
+      border-radius: var(--radius-full);
+      padding: 4px 12px;
+      font-size: 12px;
+      color: var(--text-body);
+    }
+
+    .htx-locked-badge .lock-icon {
+      font-size: 13px;
+    }
+
+    .htx-locked-badge strong {
+      color: var(--primary-900);
     }
 
     .htx-quick-pills-bar {

@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { HtxStateService } from '../../../core/services/htx-state.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
@@ -27,19 +28,41 @@ interface ProcessItem {
 @Component({
   selector: 'app-process-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, PaginationComponent],
+  imports: [CommonModule, FormsModule, RouterLink, PaginationComponent],
   template: `
     <div class="processes-page">
       <!-- HEADER TRANG -->
       <div class="page-top">
         <div>
           <div class="page-sub">QUY TRÌNH NÔNG VỤ • {{ state.currentHtx().shortName }}</div>
-          <h1 class="page-title">Quản Lý Quy Trình Canh Tác Chuẩn Nông Nghiệp</h1>
+          <h1 class="page-title">Quy Trình Canh Tác Chuẩn Nông Nghiệp HTX</h1>
         </div>
-        <button class="btn btn-primary" (click)="openAddModal()">
-          <span>➕</span> Tạo Quy Trình Nông Vụ Mới
-        </button>
+        <div>
+          @if (state.canEditProcess()) {
+            <button class="btn btn-primary" (click)="openAddModal()">
+              <span>➕</span> Tạo Quy Trình Nông Vụ Mới
+            </button>
+          } @else {
+            <a routerLink="/production/logs" class="btn btn-primary">
+              <span>📝</span> Sang Sổ Ghi Nhật Ký Sản Xuất ➔
+            </a>
+          }
+        </div>
       </div>
+
+      <!-- BANNER HƯỚNG DẪN DÀNH CHO XÃ VIÊN / NÔNG DÂN (KHÔNG CÓ QUYỀN SỬA QUY TRÌNH) -->
+      @if (!state.canEditProcess()) {
+        <div class="farmer-instruction-banner">
+          <span class="banner-icon">📖</span>
+          <div class="banner-content">
+            <strong>Sổ Tay Hướng Dẫn Kỹ Thuật Chuẩn Của HTX (Dành cho Xã Viên):</strong>
+            <p>Đây là quy trình chuẩn VietGAP/OCOP do Kỹ sư HTX ban hành. Bác chỉ cần tham khảo hướng dẫn từng bước dưới đây và thực hiện ghi chép công việc trên đồng ruộng tại <strong>"Nhật Ký Sản Xuất"</strong>.</p>
+          </div>
+          <a routerLink="/production/logs" class="btn btn-primary btn-sm">
+            <span>📝</span> Ghi Nhật Ký Ngay ➔
+          </a>
+        </div>
+      }
 
       <!-- THANH TÌM KIẾM QUY TRÌNH -->
       <div class="card filter-bar">
@@ -89,20 +112,29 @@ interface ProcessItem {
               }
             </div>
 
-            <!-- CÁC HÀNH ĐỘNG: NHÂN BẢN / SỬA / XÓA -->
-            <div class="process-actions">
-              <button class="btn btn-secondary btn-block" (click)="cloneProcess(p)">
-                <span>📋</span> Nhân Bản Vụ Mới
-              </button>
-              <div class="sub-actions">
-                <button class="btn btn-secondary flex-1" (click)="openEditModal(p)">
-                  <span>✏️</span> Chỉnh Sửa
+            <!-- CÁC HÀNH ĐỘNG THEO PHÂN QUYỀN -->
+            @if (state.canEditProcess()) {
+              <div class="process-actions">
+                <button class="btn btn-secondary btn-block" (click)="cloneProcess(p)">
+                  <span>📋</span> Nhân Bản Vụ Mới
                 </button>
-                <button class="btn btn-danger" (click)="confirmDelete(p)">
-                  <span>🗑️</span> Xóa
-                </button>
+                <div class="sub-actions">
+                  <button class="btn btn-secondary flex-1" (click)="openEditModal(p)">
+                    <span>✏️</span> Chỉnh Sửa
+                  </button>
+                  <button class="btn btn-danger" (click)="confirmDelete(p)">
+                    <span>🗑️</span> Xóa
+                  </button>
+                </div>
               </div>
-            </div>
+            } @else {
+              <div class="farmer-action-box">
+                <div class="farmer-role-tag">🔒 Quy trình chuẩn do Kỹ sư HTX ban hành (Chế độ xem hướng dẫn)</div>
+                <a routerLink="/production/logs" class="btn btn-primary btn-block">
+                  <span>📝</span> Bác Bấm Vào Đây Để Ghi Nhật Ký Vụ Này ➔
+                </a>
+              </div>
+            }
           </div>
         }
       </div>
@@ -268,6 +300,59 @@ interface ProcessItem {
       font-size: 21px;
       color: var(--text-main);
       margin: 0;
+    }
+
+    /* BANNER HƯỚNG DẪN DÀNH CHO XÃ VIÊN */
+    .farmer-instruction-banner {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      border: 1.5px solid var(--primary-400);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .banner-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .banner-content {
+      flex: 1;
+    }
+
+    .banner-content strong {
+      font-size: 13.5px;
+      color: var(--primary-950);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .banner-content p {
+      font-size: 12.5px;
+      color: var(--text-body);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .farmer-action-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .farmer-role-tag {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-align: center;
+      background: var(--bg-card-subtle);
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px dashed var(--border-color);
     }
 
     .filter-bar {
@@ -627,6 +712,10 @@ export class ProcessListComponent {
   });
 
   openAddModal() {
+    if (!this.state.canEditProcess()) {
+      this.toast.warning('Giới hạn phân quyền', 'Chỉ Kỹ sư Nông nghiệp và Quản trị viên mới có quyền tạo quy trình kỹ thuật.');
+      return;
+    }
     this.isEdit.set(false);
     this.activeProcess = {
       id: '',
@@ -647,6 +736,10 @@ export class ProcessListComponent {
   }
 
   openEditModal(p: ProcessItem) {
+    if (!this.state.canEditProcess()) {
+      this.toast.warning('Giới hạn phân quyền', 'Xã viên chỉ có quyền xem quy trình, không được chỉnh sửa quy trình chuẩn.');
+      return;
+    }
     this.isEdit.set(true);
     this.activeProcess = {
       ...p,
@@ -691,6 +784,10 @@ export class ProcessListComponent {
   }
 
   cloneProcess(p: ProcessItem) {
+    if (!this.state.canEditProcess()) {
+      this.toast.warning('Giới hạn phân quyền', 'Chỉ Kỹ sư Nông nghiệp mới có quyền nhân bản quy trình mùa vụ.');
+      return;
+    }
     const cloned: ProcessItem = {
       ...p,
       id: 'p-' + Date.now().toString(36),
@@ -707,6 +804,10 @@ export class ProcessListComponent {
   }
 
   confirmDelete(p: ProcessItem) {
+    if (!this.state.canEditProcess()) {
+      this.toast.warning('Giới hạn phân quyền', 'Chỉ Kỹ sư Nông nghiệp và Quản trị viên mới có quyền xóa quy trình.');
+      return;
+    }
     this.processToDelete = p;
     this.showDeleteModal.set(true);
   }

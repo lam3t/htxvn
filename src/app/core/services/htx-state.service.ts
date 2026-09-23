@@ -91,8 +91,51 @@ export class HtxStateService {
     return this.notifications().filter(n => !n.isRead);
   });
 
-  // Chuyển đổi HTX
+  // --- HỆ THỐNG PHÂN QUYỀN VAI TRÒ & PHẠM VI DỮ LIỆU (RBAC & MULTI-TENANCY THEO SRS MỤC 7) ---
+  readonly canSwitchHtx = computed(() => {
+    return this.currentUser().role === 'admin' || this.currentUser().isSystemAdmin === true;
+  });
+
+  readonly canManageAllHtx = computed(() => {
+    return this.currentUser().role === 'admin';
+  });
+
+  readonly canManageCurrentHtx = computed(() => {
+    return this.currentUser().role === 'admin' || this.currentUser().role === 'director';
+  });
+
+  readonly canEditProcess = computed(() => {
+    // Chỉ Kỹ sư Nông nghiệp (R03) hoặc Admin (R01) mới có quyền tạo/sửa/nhân bản quy trình mùa vụ
+    return this.currentUser().role === 'admin' || this.currentUser().role === 'technician';
+  });
+
+  readonly canApproveMembers = computed(() => {
+    // Ban Quản trị HTX (R02) và Admin (R01) có quyền duyệt thành viên
+    return this.currentUser().role === 'admin' || this.currentUser().role === 'director';
+  });
+
+  readonly canManageWarehouse = computed(() => {
+    return this.currentUser().role === 'admin' || this.currentUser().role === 'accountant';
+  });
+
+  readonly isFarmer = computed(() => {
+    return this.currentUser().role === 'member';
+  });
+
+  // Chuyển đổi HTX (Chỉ Admin Sở/Hệ thống mới được chuyển tự do; GĐ/Xã viên bị khóa vào HTX của mình)
   switchHtx(htxId: string) {
+    const user = this.currentUser();
+    const isSuperAdmin = user.role === 'admin' || user.isSystemAdmin === true;
+
+    if (!isSuperAdmin && user.htxId && user.htxId !== htxId) {
+      const currentHtxObj = this.cooperatives().find(h => h.id === user.htxId);
+      this.toast.warning(
+        'Giới hạn phạm vi HTX', 
+        `Tài khoản "${user.name}" (${user.roleTitle}) chỉ được thao tác trong nội bộ ${currentHtxObj?.name || user.htxId}.`
+      );
+      return;
+    }
+
     this.selectedHtxId.set(htxId);
     const htx = this.cooperatives().find(h => h.id === htxId);
     this.toast.info('Đã chuyển HTX', `Đang xem không gian làm việc của ${htx?.name || htxId}`);
@@ -101,7 +144,7 @@ export class HtxStateService {
   // Chuyển đổi người dùng & vai trò
   switchUser(user: User) {
     this.currentUser.set(user);
-    if (!user.isSystemAdmin && user.htxId) {
+    if (!user.isSystemAdmin && user.role !== 'admin' && user.htxId) {
       this.selectedHtxId.set(user.htxId);
     }
     this.toast.success('Đổi vai trò thành công', `Chào mừng ${user.name} (${user.roleTitle})`);

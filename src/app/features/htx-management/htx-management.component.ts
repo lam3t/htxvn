@@ -20,9 +20,11 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
           <h1 class="page-title">Mạng Lưới 03 Hợp Tác Xã Thí Điểm</h1>
           <p class="page-intro">Bác chọn HTX để vào làm việc hoặc bấm "Thêm HTX" để cập nhật hợp tác xã mới vào hệ thống.</p>
         </div>
-        <button class="btn btn-primary btn-lg" (click)="openAddModal()">
-          <span>➕</span> Thêm Hợp Tác Xã Mới
-        </button>
+        @if (state.canManageAllHtx()) {
+          <button class="btn btn-primary btn-lg" (click)="openAddModal()">
+            <span>➕</span> Thêm Hợp Tác Xã Mới
+          </button>
+        }
       </div>
 
       <!-- DẢI BANNER NỔI BẬT: HTX ĐANG TRỰC TIẾP LÀM VIỆC HIỆN TẠI -->
@@ -180,17 +182,31 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
                 </div>
               </div>
 
-              <!-- NÚT THAO TÁC TO RÕ -->
+              <!-- NÚT THAO TÁC THEO PHÂN QUYỀN RBAC -->
               <div class="htx-card-actions">
-                <button 
-                  class="btn btn-action-main" 
-                  [class.btn-working]="state.selectedHtxId() === h.id"
-                  [class.btn-primary]="state.selectedHtxId() !== h.id"
-                  (click)="switchToHtx(h)">
-                  {{ state.selectedHtxId() === h.id ? '✅ Đang Làm Việc • Vào Bảng Điều Khiển ➔' : '👉 Bấm Chọn Làm Việc Với HTX Này' }}
-                </button>
-                <button class="btn btn-secondary" (click)="openEditModal(h)">✏️ Sửa</button>
-                <button class="btn btn-danger" (click)="confirmDelete(h)">🗑️ Xóa</button>
+                @if (state.selectedHtxId() === h.id) {
+                  <button class="btn btn-action-main btn-working" (click)="goToDashboard()">
+                    ✅ Đang Làm Việc • Vào Bảng Điều Khiển ➔
+                  </button>
+                  @if (canEditThisHtx(h)) {
+                    <button class="btn btn-secondary" (click)="openEditModal(h)">✏️ Sửa</button>
+                  }
+                  @if (state.canManageAllHtx()) {
+                    <button class="btn btn-danger" (click)="confirmDelete(h)">🗑️ Xóa</button>
+                  }
+                } @else {
+                  @if (state.canSwitchHtx()) {
+                    <button class="btn btn-action-main btn-primary" (click)="switchToHtx(h)">
+                      👉 Chuyển Sang Làm Việc Với HTX Này
+                    </button>
+                    <button class="btn btn-secondary" (click)="openEditModal(h)">✏️ Sửa</button>
+                    <button class="btn btn-danger" (click)="confirmDelete(h)">🗑️ Xóa</button>
+                  } @else {
+                    <button class="btn btn-action-main btn-secondary" style="cursor: not-allowed; opacity: 0.8;" (click)="showScopeWarning(h)">
+                      🔒 HTX Khác (Tài khoản chỉ thao tác tại {{ state.currentHtx().shortName }})
+                    </button>
+                  }
+                }
               </div>
             </div>
           }
@@ -245,14 +261,29 @@ import { PaginationComponent } from '../../shared/components/pagination/paginati
                     </td>
                     <td style="text-align: right;">
                       <div class="table-actions-inline" style="justify-content: flex-end;">
-                        <button 
-                          class="btn btn-sm" 
-                          [ngClass]="state.selectedHtxId() === h.id ? 'btn-success-active' : 'btn-primary'"
-                          (click)="switchToHtx(h)">
-                          {{ state.selectedHtxId() === h.id ? '✓ Đang xem' : '👉 Chọn HTX này' }}
-                        </button>
-                        <button class="btn btn-secondary btn-sm" (click)="openEditModal(h)">✏️ Sửa</button>
-                        <button class="btn btn-danger btn-sm" (click)="confirmDelete(h)">🗑️ Xóa</button>
+                        @if (state.selectedHtxId() === h.id) {
+                          <button class="btn btn-sm btn-success-active" (click)="goToDashboard()">
+                            ✓ Đang làm việc ➔
+                          </button>
+                          @if (canEditThisHtx(h)) {
+                            <button class="btn btn-secondary btn-sm" (click)="openEditModal(h)">✏️ Sửa</button>
+                          }
+                          @if (state.canManageAllHtx()) {
+                            <button class="btn btn-danger btn-sm" (click)="confirmDelete(h)">🗑️ Xóa</button>
+                          }
+                        } @else {
+                          @if (state.canSwitchHtx()) {
+                            <button class="btn btn-sm btn-primary" (click)="switchToHtx(h)">
+                              👉 Chọn HTX này
+                            </button>
+                            <button class="btn btn-secondary btn-sm" (click)="openEditModal(h)">✏️ Sửa</button>
+                            <button class="btn btn-danger btn-sm" (click)="confirmDelete(h)">🗑️ Xóa</button>
+                          } @else {
+                            <button class="btn btn-sm btn-secondary" style="opacity: 0.7;" (click)="showScopeWarning(h)">
+                              🔒 Khác HTX
+                            </button>
+                          }
+                        }
                       </div>
                     </td>
                   </tr>
@@ -944,7 +975,24 @@ export class HtxManagementComponent {
     }
   }
 
+  canEditThisHtx(h: HTXInfo): boolean {
+    if (this.state.canManageAllHtx()) return true;
+    if (this.state.currentUser().role === 'director' && this.state.currentUser().htxId === h.id) return true;
+    return false;
+  }
+
+  showScopeWarning(h: HTXInfo) {
+    this.toast.warning(
+      'Giới hạn phạm vi quản trị HTX',
+      `Tài khoản "${this.state.currentUser().name}" (${this.state.currentUser().roleTitle}) chỉ được thao tác tại ${this.state.currentHtx().name}.`
+    );
+  }
+
   openAddModal() {
+    if (!this.state.canManageAllHtx()) {
+      this.toast.warning('Giới hạn phân quyền', 'Chỉ Quản trị viên Sở/Hệ thống mới có quyền thêm Hợp tác xã mới vào mạng lưới.');
+      return;
+    }
     this.isEdit.set(false);
     this.activeHtx = {
       id: '',
@@ -972,6 +1020,10 @@ export class HtxManagementComponent {
   }
 
   openEditModal(h: HTXInfo) {
+    if (!this.canEditThisHtx(h)) {
+      this.toast.warning('Giới hạn phân quyền', `Bác chỉ có quyền chỉnh sửa hồ sơ của ${this.state.currentHtx().name}.`);
+      return;
+    }
     this.isEdit.set(true);
     this.activeHtx = { ...h };
     this.showModal.set(true);
@@ -1001,11 +1053,20 @@ export class HtxManagementComponent {
   }
 
   confirmDelete(h: HTXInfo) {
+    if (!this.state.canManageAllHtx()) {
+      this.toast.warning('Giới hạn phân quyền', 'Chỉ Quản trị viên Sở/Hệ thống mới có quyền xóa Hợp tác xã.');
+      return;
+    }
     this.htxToDelete = h;
     this.showDeleteModal.set(true);
   }
 
   executeDelete() {
+    if (!this.state.canManageAllHtx()) {
+      this.toast.warning('Giới hạn phân quyền', 'Bác không có quyền xóa Hợp tác xã.');
+      this.showDeleteModal.set(false);
+      return;
+    }
     if (this.htxToDelete) {
       this.state.deleteHTX(this.htxToDelete.id);
       this.showDeleteModal.set(false);
