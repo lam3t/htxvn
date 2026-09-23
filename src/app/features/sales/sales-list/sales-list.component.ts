@@ -460,6 +460,8 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
       font-weight: 600;
       color: var(--text-main);
       outline: none;
+    }
+
     .category-filter-box select {
       min-width: 180px;
       height: 36px;
